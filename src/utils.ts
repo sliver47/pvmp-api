@@ -3,6 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import * as vscode from 'vscode';
 import xml2js from 'xml2js';
+import os from 'os';
+import fetch from 'node-fetch';
 
 import { CONSTANTS } from './constants';
 import { Extension } from './models/extension';
@@ -301,12 +303,30 @@ const resolveVariables = (inputPath: string): string => {
 };
 
 /**
- * Gets the extension sources configured in VSCode settings.
- * @returns an array of extension source paths.
+ * 根据配置获取扩展源：本地目录列表或 API 拉取
  */
-export const getExtensionSources = (): string[] => {
-  const paths = vscode.workspace.getConfiguration('').get<string[]>(CONSTANTS.propSource) || [];
-  return paths.map(resolveVariables);
+export const getExtensionSources = async (): Promise<string[]> => {
+  const config = vscode.workspace.getConfiguration('privateMarketplace');
+  const useApi = config.get<boolean>('useApi') || false;
+  if (useApi) {
+    const apiUrl = config.get<string>('apiUrl')?.trim();
+    if (!apiUrl) {
+      vscode.window.showErrorMessage('privateMarketplace.apiUrl 未配置');
+      return [];
+    }
+    try {
+      const resp = await fetch(apiUrl);
+      const urls: string[] = (await resp.json()) as string[];
+      return await downloadVsixFiles(urls);
+    } catch (err: unknown) {
+      console.error(err);
+      vscode.window.showErrorMessage(`调用扩展列表接口失败：${err instanceof Error ? err.message : String(err)}`);
+      return [];
+    }
+  }
+  // 兼容旧逻辑：读取本地文件夹
+  const dirs = config.get<string[]>('source') || [];
+  return dirs.map(resolveVariables);
 };
 
 export const getWebviewOptions = (extensionUri: vscode.Uri): vscode.WebviewOptions => {
@@ -315,3 +335,25 @@ export const getWebviewOptions = (extensionUri: vscode.Uri): vscode.WebviewOptio
     localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'media'), vscode.Uri.joinPath(extensionUri, 'out')],
   };
 };
+
+/**
+ * 下载远程 .vsix 文件到本地临时目录
+ */
+async function downloadVsixFiles(urls: string[]): Promise<string[]> {
+  const tempDir = path.join(os.tmpdir(), 'pvmp-vsix');
+  await fs.promises.mkdir(tempDir, { recursive: true });
+  const localPaths: string[] = [];
+  for (const url of urls) {
+    const res = await fetch(url);
+    if (!res.ok) {
+      vscode.window.showErrorMessage(`下载扩展失败：${url} → ${res.statusText}`);
+      continue;
+    }
+    const buffer = await res.buffer();
+    const fileName = path.basename(new URL(url).pathname);
+    const filePath = path.join(tempDir, fileName);
+    await fs.promises.writeFile(filePath, buffer);
+    localPaths.push(filePath);
+  }
+  return localPaths;
+}
