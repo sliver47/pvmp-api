@@ -44,7 +44,7 @@ export function activate(context: vscode.ExtensionContext) {
   });
 
   vscode.commands.registerCommand(CONSTANTS.cmdBatchUpdate, async () => {
-    const packages = await getPackages(getExtensionSources() || []);
+    const packages = await getPackages((await getExtensionSources()) || []);
     const length = packages.filter((x) => x.isUpdateAvailable()).length;
     if (!length) {
       return vscode.window.showInformationMessage('No Updates Available!');
@@ -68,7 +68,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   vscode.commands.registerCommand(CONSTANTS.cmdUpdate, async (pkg: Package) => {
     await vscode.commands.executeCommand(CONSTANTS.cmdInstall, pkg);
-    vscode.commands.executeCommand('workbench.action.reloadWindow');
+    vscode.commands.executeCommand('workbench.action.restartExtensionHost');
   });
 
   vscode.commands.registerCommand(CONSTANTS.cmdInstall, async (pkg: Package) => {
@@ -88,7 +88,7 @@ export function activate(context: vscode.ExtensionContext) {
 
       DetailsPanel.currentPanel?.update(pkg);
       extensionViewProvider.refresh();
-      vscode.commands.executeCommand('workbench.action.reloadWindow');
+      vscode.commands.executeCommand('workbench.action.restartExtensionHost');
     }
   });
 

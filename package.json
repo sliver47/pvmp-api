@@ -35,19 +35,6 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
-    "title": "Private Marketplace",
-    "properties": {
-      "privateMarketplace.useApi": {
-        "type": "boolean",
-        "default": false,
-        "description": "是否使用远程 API 获取扩展列表"
-      },
-      "privateMarketplace.apiUrl": {
-        "type": "string",
-        "default": "",
-        "description": "用于拉取 .vsix 文件 URL 列表的接口地址"
-      }
-    },
     "colors": [
       {
         "id": "privateMarketplace.updateIconColor",
@@ -121,6 +108,21 @@
       }
     ],
     "configuration": [
+      {
+        "title": "Private Marketplace",
+        "properties": {
+          "privateMarketplace.useApi": {
+            "type": "boolean",
+            "default": false,
+            "description": "是否使用远程 API 获取扩展列表"
+          },
+          "privateMarketplace.apiUrl": {
+            "type": "string",
+            "default": "",
+            "description": "用于拉取 .vsix 文件 URL 列表的接口地址"
+          }
+        }
+      },
       {
         "title": "Private Marketplace",
         "properties": {

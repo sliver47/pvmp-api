@@ -27,7 +27,7 @@ def list_extensions():
         return jsonify({"error": "VSIX directory not found"}), 500
 
     extensions = [
-        {"name": fname, "url": f"/extensions/{fname}"}
+        {"name": fname, "url": f"/{fname}"}
         for fname in files
     ]
     return jsonify(extensions)
@@ -45,7 +45,7 @@ def download_extension(name):
     try:
         return send_from_directory(
             directory=VSIX_DIR,
-            filename=name,
+            path=name,
             as_attachment=True,
             mimetype="application/octet-stream"
         )

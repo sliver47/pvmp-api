@@ -248,7 +248,7 @@ export const batchUpdateExtensions = async (pkgs: Package[], ctx: vscode.Extensi
       .getConfiguration('')
       ?.update(CONSTANTS.propFailedUpdates, failedIds, vscode.ConfigurationTarget.Global);
   if (updated) {
-    await vscode.commands.executeCommand('workbench.action.reloadWindow');
+    await vscode.commands.executeCommand('workbench.action.restartExtensionHost');
   }
 };
 
@@ -316,7 +316,9 @@ export const getExtensionSources = async (): Promise<string[]> => {
     }
     try {
       const resp = await fetch(apiUrl);
-      const urls: string[] = (await resp.json()) as string[];
+      const relativeUrls = (await resp.json()) as { name: string; url: string }[];
+      // 给每个 url 添加 apiUrl 前缀
+      const urls: string[] = relativeUrls.map((item) => apiUrl + item.url);
       return await downloadVsixFiles(urls);
     } catch (err: unknown) {
       console.error(err);
@@ -325,8 +327,8 @@ export const getExtensionSources = async (): Promise<string[]> => {
     }
   }
   // 兼容旧逻辑：读取本地文件夹
-  const dirs = config.get<string[]>('source') || [];
-  return dirs.map(resolveVariables);
+  const paths = vscode.workspace.getConfiguration('').get<string[]>(CONSTANTS.propSource) || [];
+  return paths.map(resolveVariables);
 };
 
 export const getWebviewOptions = (extensionUri: vscode.Uri): vscode.WebviewOptions => {
@@ -355,5 +357,7 @@ async function downloadVsixFiles(urls: string[]): Promise<string[]> {
     await fs.promises.writeFile(filePath, buffer);
     localPaths.push(filePath);
   }
-  return localPaths;
+  const extensionPaths: string[] = [];
+  extensionPaths.push(tempDir);
+  return extensionPaths;
 }
